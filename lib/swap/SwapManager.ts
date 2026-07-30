@@ -548,7 +548,7 @@ class SwapManager {
         args.refundPublicKey!,
       );
 
-      result.claimPublicKey = getHexString(receivingCurrency.arkNode!.pubkey);
+      result.claimPublicKey = vHtlc.vHtlc.claimPubkey;
       result.address = vHtlc.vHtlc.address;
       result.timeoutBlockHeights = vHtlc.timeouts;
 
@@ -1122,7 +1122,7 @@ class SwapManager {
         args.nonInteractiveClaim,
       );
 
-      result.refundPublicKey = getHexString(sendingCurrency.arkNode!.pubkey);
+      result.refundPublicKey = vHtlc.vHtlc.refundPubkey;
       result.lockupAddress = vHtlc.vHtlc.address;
       result.swapTree = vHtlc.vHtlc.swapTree;
 
@@ -1342,7 +1342,9 @@ class SwapManager {
         ]);
 
         timeouts = vHtlc.timeouts;
-        serverKeys = getHexString(currency.arkNode!.pubkey);
+        serverKeys = isSending
+          ? vHtlc.vHtlc.refundPubkey
+          : vHtlc.vHtlc.claimPubkey;
 
         res.theirPublicKey = getHexString(theirPublicKey!);
         res.lockupAddress = vHtlc.vHtlc.address;
@@ -1560,7 +1562,7 @@ class SwapManager {
             swap.lockupAddress,
             ArkClient.createVhtlcId(
               getHexBuffer(swap.preimageHash),
-              arkNode.pubkey,
+              swap.keyIndex,
               getHexBuffer((swap as ReverseSwap).claimPublicKey!),
             ),
           );
