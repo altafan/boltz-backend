@@ -2,11 +2,9 @@ use crate::ark::client::ark_rpc::{GetInfoRequest, GetInfoResponse};
 use crate::chain::BaseClient;
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
-use bitcoin::secp256k1;
 use boltz_utils::mb_to_bytes;
 use std::path::Path;
 use std::str::FromStr;
-use std::sync::{Arc, RwLock};
 use tonic::metadata::MetadataValue;
 use tonic::service::interceptor::InterceptedService;
 use tonic::transport::Channel;
@@ -45,8 +43,6 @@ type ArkServiceClient =
 pub struct ArkClient {
     symbol: String,
     client: ArkServiceClient,
-
-    pubkey: Arc<RwLock<Option<secp256k1::PublicKey>>>,
 }
 
 impl ArkClient {
@@ -86,12 +82,7 @@ impl ArkClient {
                 MacaroonInterceptor { macaroon },
             )
             .max_decoding_message_size(MAX_MESSAGE_SIZE),
-            pubkey: Arc::new(RwLock::new(None)),
         })
-    }
-
-    pub fn pubkey(&self) -> Option<secp256k1::PublicKey> {
-        self.pubkey.read().ok().and_then(|v| *v)
     }
 
     async fn get_info(&mut self) -> anyhow::Result<GetInfoResponse> {
@@ -113,12 +104,6 @@ impl BaseClient for ArkClient {
     #[instrument(name = "ArkClient::connect", skip_all)]
     async fn connect(&mut self) -> anyhow::Result<()> {
         let info = self.get_info().await?;
-        let pubkey = secp256k1::PublicKey::from_slice(&hex::decode(&info.pubkey)?)?;
-        let mut pubkey_guard = self
-            .pubkey
-            .write()
-            .map_err(|e| anyhow!("failed to acquire pubkey lock: {}", e))?;
-        *pubkey_guard = Some(pubkey);
 
         info!(
             "Connected to {} {} {}: {}@{}",
@@ -127,7 +112,7 @@ impl BaseClient for ArkClient {
             info.build_info
                 .map(|info| info.version)
                 .unwrap_or("unknown version".to_string()),
-            info.pubkey,
+            info.signer_pubkey,
             info.server_url,
         );
 
@@ -164,15 +149,12 @@ pub mod tests {
     }
 
     #[tokio::test]
-    async fn test_connect_pubkey() {
+    async fn test_connect() {
         let mut client = get_client().await;
-
-        assert!(client.pubkey().is_none());
 
         client.connect().await.unwrap();
 
-        let pubkey = client.pubkey();
-        assert!(pubkey.is_some());
-        assert!(!pubkey.unwrap().to_string().is_empty());
+        let info = client.get_info().await.unwrap();
+        assert!(!info.signer_pubkey.is_empty());
     }
 }

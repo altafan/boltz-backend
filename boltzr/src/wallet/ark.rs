@@ -6,6 +6,8 @@ use bitcoin::{bip32::Xpriv, secp256k1};
 use std::sync::Arc;
 
 pub struct Ark {
+    // Kept for when key derivation is wired to Fulmine's GetPubKey call
+    #[allow(dead_code)]
     client: Arc<ArkClient>,
 }
 
@@ -25,15 +27,14 @@ impl Wallet for Ark {
         Err(anyhow!("not implemented for ark"))
     }
 
+    // Since Fulmine v0.4 the keys of vHTLCs are derived from an HD wallet. Resolving an
+    // index to a public key requires the GetPubKey call, which this sync trait cannot do.
     fn derive_pubkey(
         &self,
         _secp: &secp256k1::Secp256k1<secp256k1::All>,
         _index: u64,
     ) -> Result<secp256k1::PublicKey> {
-        match self.client.pubkey() {
-            Some(pubkey) => Ok(pubkey),
-            None => Err(anyhow!("no pubkey found")),
-        }
+        Err(anyhow!("not implemented for ark"))
     }
 
     fn derive_blinding_key(&self, _script_pubkey: Vec<u8>) -> Result<Vec<u8>> {
@@ -60,24 +61,10 @@ mod tests {
         assert_eq!(
             wallet
                 .derive_pubkey(&secp256k1::Secp256k1::new(), 0)
-                .unwrap()
-                .to_string(),
-            client.pubkey().unwrap().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_derive_pubkey_no_key() {
-        let client = Arc::new(get_client().await);
-        let wallet = Ark::new(client.clone());
-
-        assert_eq!(
-            wallet
-                .derive_pubkey(&secp256k1::Secp256k1::new(), 0)
                 .err()
                 .unwrap()
                 .to_string(),
-            "no pubkey found"
+            "not implemented for ark"
         );
     }
 }
