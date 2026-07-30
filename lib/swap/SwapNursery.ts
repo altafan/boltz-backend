@@ -2154,10 +2154,15 @@ class SwapNursery extends TypedEventEmitter<SwapNurseryEvents> {
           ? (swap as Swap).lockupTransactionVout
           : (swap as ChainSwapInfo).receivingData.transactionVout;
 
+      const keyIndex =
+        swap.type === SwapType.Submarine
+          ? (swap as Swap).keyIndex
+          : (swap as ChainSwapInfo).receivingData.keyIndex;
+
       const claimTransaction = await arkClient.claimVHtlc(
         preimage,
         getHexBuffer(swap.theirRefundPublicKey!),
-        arkClient.pubkey,
+        keyIndex!,
         { txId: txId!, vout: vout! },
         TransactionLabelRepository.claimLabel(swap),
       );
@@ -2566,9 +2571,14 @@ class SwapNursery extends TypedEventEmitter<SwapNurseryEvents> {
         ? (swap as ReverseSwap).transactionVout
         : (swap as ChainSwapInfo).sendingData.transactionVout;
 
+    const keyIndex =
+      swap.type === SwapType.ReverseSubmarine
+        ? (swap as ReverseSwap).keyIndex
+        : (swap as ChainSwapInfo).sendingData.keyIndex;
+
     const txId = await arkClient.refundVHtlc(
       getHexBuffer(swap.preimageHash),
-      arkClient.pubkey,
+      keyIndex!,
       getHexBuffer(
         swap.type === SwapType.ReverseSubmarine
           ? (swap as ReverseSwap).claimPublicKey!

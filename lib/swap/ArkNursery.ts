@@ -359,13 +359,14 @@ class ArkNursery extends TypedEventEmitter<{
 
     const handleClaim = async (
       swap: ReverseSwap | ChainSwapInfo,
+      keyIndex: number,
       receiverPubkeyHex: string,
       lockupAddress: string,
       emit: (preimage: Buffer) => void,
     ) => {
       const vhtlcId = ArkClient.createVhtlcId(
         getHexBuffer(swap.preimageHash),
-        arkNode.pubkey,
+        await arkNode.getPubkey(keyIndex),
         getHexBuffer(receiverPubkeyHex),
       );
       const preimage = await this.fetchClaimPreimage(
@@ -390,6 +391,7 @@ class ArkNursery extends TypedEventEmitter<{
     if (reverseSwap !== null && reverseSwap !== undefined) {
       await handleClaim(
         reverseSwap,
+        reverseSwap.keyIndex!,
         reverseSwap.claimPublicKey!,
         reverseSwap.lockupAddress,
         (preimage) =>
@@ -400,6 +402,7 @@ class ArkNursery extends TypedEventEmitter<{
     if (chainSwap !== null && chainSwap !== undefined) {
       await handleClaim(
         chainSwap,
+        chainSwap.sendingData.keyIndex!,
         chainSwap.sendingData.theirPublicKey!,
         chainSwap.sendingData.lockupAddress,
         (preimage) =>

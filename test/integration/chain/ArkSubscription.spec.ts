@@ -1,3 +1,5 @@
+import { secp256k1 } from '@noble/curves/secp256k1.js';
+import { randomBytes } from 'crypto';
 import type {
   CreatedVHtlc,
   SpentVHtlc,
@@ -9,6 +11,12 @@ import { arkClient, bitcoinClient } from '../Nodes';
 import { createVHtlc } from './Utils';
 
 TransactionLabelRepository.addLabel = jest.fn();
+
+// Fulmine derives a key per vHTLC, so it is made the receiver of the vHTLCs
+// created in these tests by setting only the refund (sender) public key
+const refundPublicKey = Buffer.from(
+  secp256k1.getPublicKey(randomBytes(32), true),
+);
 
 describe('ArkSubscription', () => {
   beforeAll(async () => {
@@ -28,8 +36,18 @@ describe('ArkSubscription', () => {
   });
 
   test('should subscribe to addresses', async () => {
-    const vHtlcOne = await createVHtlc(arkClient, undefined, arkClient.pubkey);
-    const vHtlcTwo = await createVHtlc(arkClient, undefined, arkClient.pubkey);
+    const vHtlcOne = await createVHtlc(
+      arkClient,
+      undefined,
+      undefined,
+      refundPublicKey,
+    );
+    const vHtlcTwo = await createVHtlc(
+      arkClient,
+      undefined,
+      undefined,
+      refundPublicKey,
+    );
 
     const addresses = [vHtlcOne, vHtlcTwo].map((vHtlc) => ({
       address: vHtlc.vHtlc.address,
@@ -66,7 +84,12 @@ describe('ArkSubscription', () => {
   });
 
   test('should unsubscribe from address', async () => {
-    const vHtlc = await createVHtlc(arkClient, undefined, arkClient.pubkey);
+    const vHtlc = await createVHtlc(
+      arkClient,
+      undefined,
+      undefined,
+      refundPublicKey,
+    );
 
     await arkClient.subscription.subscribeAddresses([
       {
@@ -105,7 +128,12 @@ describe('ArkSubscription', () => {
 
   describe('streamVhtlcs', () => {
     test('should forward vHTLC created events', async () => {
-      const vHtlc = await createVHtlc(arkClient, undefined, arkClient.pubkey);
+      const vHtlc = await createVHtlc(
+        arkClient,
+        undefined,
+        undefined,
+        refundPublicKey,
+      );
 
       await arkClient.subscription.subscribeAddresses([
         {
@@ -137,7 +165,12 @@ describe('ArkSubscription', () => {
     });
 
     test('should forward vHTLC spent events', async () => {
-      const vHtlc = await createVHtlc(arkClient, undefined, arkClient.pubkey);
+      const vHtlc = await createVHtlc(
+        arkClient,
+        undefined,
+        undefined,
+        refundPublicKey,
+      );
 
       await arkClient.subscription.subscribeAddresses([
         {
@@ -169,8 +202,8 @@ describe('ArkSubscription', () => {
       const created = await createdPromise;
       await arkClient.claimVHtlc(
         vHtlc.preimage,
-        arkClient.pubkey,
-        arkClient.pubkey,
+        refundPublicKey,
+        vHtlc.keyIndex,
         {
           txId: created.txId,
           vout: created.vout,
@@ -184,7 +217,12 @@ describe('ArkSubscription', () => {
 
   describe('rescan', () => {
     test('should emit vHTLC created events', async () => {
-      const vHtlc = await createVHtlc(arkClient, undefined, arkClient.pubkey);
+      const vHtlc = await createVHtlc(
+        arkClient,
+        undefined,
+        undefined,
+        refundPublicKey,
+      );
 
       const emitPromise = new Promise<CreatedVHtlc>((resolve) => {
         arkClient.subscription.on('vhtlc.created', (event) => {
@@ -218,7 +256,12 @@ describe('ArkSubscription', () => {
     });
 
     test('should emit vHTLC spent events', async () => {
-      const vHtlc = await createVHtlc(arkClient, undefined, arkClient.pubkey);
+      const vHtlc = await createVHtlc(
+        arkClient,
+        undefined,
+        undefined,
+        refundPublicKey,
+      );
 
       const amount = 10_000;
       const balanceBefore = (await arkClient.getBalance()).confirmedBalance;
@@ -245,8 +288,8 @@ describe('ArkSubscription', () => {
       const created = await createdPromise;
       await arkClient.claimVHtlc(
         vHtlc.preimage,
-        arkClient.pubkey,
-        arkClient.pubkey,
+        refundPublicKey,
+        vHtlc.keyIndex,
         {
           txId: created.txId,
           vout: created.vout,

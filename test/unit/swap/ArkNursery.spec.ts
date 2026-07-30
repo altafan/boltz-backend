@@ -41,7 +41,7 @@ describe('ArkNursery', () => {
     test('should check reverse swap claims', async () => {
       const arkClient = {
         symbol: 'ARK',
-        pubkey: arkNodePubkey,
+        getPubkey: jest.fn().mockResolvedValue(arkNodePubkey),
         getVhtlcSpendingTx: jest.fn().mockResolvedValue(claimTx),
         subscription: {
           unsubscribeAddress: jest.fn(),
@@ -115,7 +115,7 @@ describe('ArkNursery', () => {
     test('should check chain swap claims', async () => {
       const arkClient = {
         symbol: 'ARK',
-        pubkey: arkNodePubkey,
+        getPubkey: jest.fn().mockResolvedValue(arkNodePubkey),
         getVhtlcSpendingTx: jest.fn().mockResolvedValue(claimTx),
         subscription: {
           unsubscribeAddress: jest.fn(),
@@ -186,7 +186,7 @@ describe('ArkNursery', () => {
 
       const arkClient = {
         symbol: 'ARK',
-        pubkey: arkNodePubkey,
+        getPubkey: jest.fn().mockResolvedValue(arkNodePubkey),
         getVhtlcSpendingTx: jest.fn().mockResolvedValue(claimTx),
         subscription: {
           unsubscribeAddress: jest.fn(),
@@ -515,7 +515,7 @@ describe('ArkNursery', () => {
     test('collects spent claims for batched unsubscribe without unsubscribing immediately', async () => {
       const mockArkNode = {
         symbol: 'ARK',
-        pubkey: arkNodePubkey,
+        getPubkey: jest.fn().mockResolvedValue(arkNodePubkey),
         getVhtlcSpendingTx: jest.fn().mockResolvedValue(claimTx),
         subscription: {
           unsubscribeAddress: jest.fn(),
@@ -1435,7 +1435,7 @@ describe('ArkNursery', () => {
 
       const arkClient = {
         symbol: 'ARK',
-        pubkey: arkNodePubkey,
+        getPubkey: jest.fn().mockResolvedValue(arkNodePubkey),
         getVhtlcSpendingTx: jest.fn().mockResolvedValue(claimTx),
         subscription: {
           unsubscribeAddress: jest.fn(),

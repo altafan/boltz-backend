@@ -2512,7 +2512,6 @@ describe('SwapNursery', () => {
   describe('claimVtxo', () => {
     const mockArkClient = {
       claimVHtlc: jest.fn().mockResolvedValue('ark-claim-tx'),
-      pubkey: Buffer.from('03'.repeat(33), 'hex'),
       symbol: 'ARK',
     } as any;
 
@@ -2527,6 +2526,7 @@ describe('SwapNursery', () => {
         id: 'submarine-ark-swap',
         type: SwapType.Submarine,
         theirRefundPublicKey: '02'.repeat(33),
+        keyIndex: 21,
         lockupTransactionId: 'submarine-lockup-tx',
         lockupTransactionVout: 4,
       } as any;
@@ -2540,7 +2540,7 @@ describe('SwapNursery', () => {
       expect(mockArkClient.claimVHtlc).toHaveBeenCalledWith(
         Buffer.from('preimage'),
         Buffer.from('02'.repeat(33), 'hex'),
-        mockArkClient.pubkey,
+        21,
         {
           txId: 'submarine-lockup-tx',
           vout: 4,
@@ -2558,6 +2558,7 @@ describe('SwapNursery', () => {
         receivingData: {
           transactionId: 'chain-lockup-tx',
           transactionVout: 7,
+          keyIndex: 22,
         },
       } as unknown as ChainSwapInfo;
 
@@ -2570,7 +2571,7 @@ describe('SwapNursery', () => {
       expect(mockArkClient.claimVHtlc).toHaveBeenCalledWith(
         Buffer.from('preimage'),
         Buffer.from('02'.repeat(33), 'hex'),
-        mockArkClient.pubkey,
+        22,
         {
           txId: 'chain-lockup-tx',
           vout: 7,
@@ -2623,7 +2624,6 @@ describe('SwapNursery', () => {
 
     const mockArkClient = {
       refundVHtlc: jest.fn().mockResolvedValue('ark-refund-tx'),
-      pubkey: Buffer.from('03'.repeat(33), 'hex'),
       symbol: 'ARK',
     } as any;
 
@@ -2648,6 +2648,7 @@ describe('SwapNursery', () => {
         type: SwapType.ReverseSubmarine,
         preimageHash: 'aa'.repeat(32),
         claimPublicKey: '02'.repeat(33),
+        keyIndex: 31,
         transactionId: 'reverse-lockup-tx',
         transactionVout: 2,
       } as any;
@@ -2656,7 +2657,7 @@ describe('SwapNursery', () => {
 
       expect(mockArkClient.refundVHtlc).toHaveBeenCalledWith(
         Buffer.from('aa'.repeat(32), 'hex'),
-        mockArkClient.pubkey,
+        31,
         Buffer.from('02'.repeat(33), 'hex'),
         {
           txId: 'reverse-lockup-tx',
@@ -2808,6 +2809,7 @@ describe('SwapNursery', () => {
         preimageHash: 'bb'.repeat(32),
         sendingData: {
           theirPublicKey: '02'.repeat(33),
+          keyIndex: 32,
           transactionId: 'chain-lockup-tx',
           transactionVout: 5,
         },
@@ -2817,7 +2819,7 @@ describe('SwapNursery', () => {
 
       expect(mockArkClient.refundVHtlc).toHaveBeenCalledWith(
         Buffer.from('bb'.repeat(32), 'hex'),
-        mockArkClient.pubkey,
+        32,
         Buffer.from('02'.repeat(33), 'hex'),
         {
           txId: 'chain-lockup-tx',

@@ -27,15 +27,17 @@ describe('ArkClient', () => {
     await expect(arkClient.connect(bitcoinClient)).resolves.toBe(true);
   });
 
-  test('should set pubkey after connecting', async () => {
-    await arkClient.connect(bitcoinClient);
+  test('should get pubkeys by key index', async () => {
+    const { vHtlc, keyIndex } = await createVHtlc(
+      arkClient,
+      undefined,
+      undefined,
+      randomPublicKey(),
+    );
 
-    expect(arkClient.pubkey).toBeDefined();
-    expect(Buffer.isBuffer(arkClient.pubkey)).toBe(true);
-    expect(arkClient.pubkey.length).toBeGreaterThan(0);
-
-    const info = await arkClient.getInfo();
-    expect(getHexBuffer(info.pubkey)).toEqual(arkClient.pubkey);
+    const pubkey = await arkClient.getPubkey(keyIndex);
+    expect(Buffer.isBuffer(pubkey)).toBe(true);
+    expect(pubkey).toEqual(getHexBuffer(vHtlc.claimPubkey));
   });
 
   test('should set signerPubkey and addrPrefix after connecting', async () => {
@@ -122,7 +124,7 @@ describe('ArkClient', () => {
   test('should claim vHTLCs', async () => {
     const refundPublicKey = randomPublicKey();
 
-    const { vHtlc, preimage } = await createVHtlc(
+    const { vHtlc, preimage, keyIndex } = await createVHtlc(
       arkClient,
       undefined,
       undefined,
@@ -159,12 +161,11 @@ describe('ArkClient', () => {
     });
 
     const created = await createdPromise;
-    const info = await arkClient.getInfo();
     const label = 'claim';
     const claimTxId = await arkClient.claimVHtlc(
       preimage,
       refundPublicKey,
-      getHexBuffer(info.pubkey),
+      keyIndex,
       {
         txId: created.txId,
         vout: created.vout,
@@ -189,14 +190,12 @@ describe('ArkClient', () => {
   // TODO: this throws "2 UNKNOWN: forfeit closure is CLTV locked, 48000 > 1750885681 (block time)"
   // eslint-disable-next-line jest/no-disabled-tests
   test.skip('should refund vHTLCs', async () => {
-    const refundPublicKey = randomPublicKey();
     const claimPublicKey = randomPublicKey();
 
-    const { vHtlc, preimage } = await createVHtlc(
+    const { vHtlc, preimage, keyIndex } = await createVHtlc(
       arkClient,
       undefined,
       claimPublicKey,
-      refundPublicKey,
     );
 
     const balanceBefore = (await arkClient.getBalance()).confirmedBalance;
@@ -232,7 +231,7 @@ describe('ArkClient', () => {
     const label = 'refund';
     const refundTxId = await arkClient.refundVHtlc(
       Buffer.from(sha256(preimage)),
-      refundPublicKey,
+      keyIndex,
       claimPublicKey,
       {
         txId: created.txId,
@@ -256,7 +255,7 @@ describe('ArkClient', () => {
     const preimageHash = Buffer.from(sha256(preimage));
     const receiverPubkey = randomPublicKey();
 
-    const { vHtlc } = await arkClient.createVHtlc(
+    const { vHtlc, keyIndex } = await arkClient.createVHtlc(
       preimageHash,
       20,
       receiverPubkey,
@@ -264,7 +263,7 @@ describe('ArkClient', () => {
 
     const expectedId = ArkClient.createVhtlcId(
       preimageHash,
-      getHexBuffer((await arkClient.getInfo()).pubkey),
+      await arkClient.getPubkey(keyIndex),
       receiverPubkey,
     );
 

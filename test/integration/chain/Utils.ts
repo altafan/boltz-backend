@@ -10,7 +10,7 @@ export const createVHtlc = async (
 ) => {
   const preimage = randomBytes(32);
 
-  const { vHtlc, timeouts } = await arkClient.createVHtlc(
+  const { vHtlc, timeouts, keyIndex } = await arkClient.createVHtlc(
     Buffer.from(sha256(preimage)),
     refundDelay,
     claimPublicKey,
@@ -20,6 +20,7 @@ export const createVHtlc = async (
   return {
     vHtlc,
     timeouts,
+    keyIndex,
     preimage,
   };
 };

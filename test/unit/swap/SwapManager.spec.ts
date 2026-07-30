@@ -645,9 +645,10 @@ describe('SwapManager', () => {
     const arkSubscription = {
       subscribeAddresses: jest.fn().mockResolvedValue(undefined),
     };
+    const ourPubkey = Buffer.alloc(32, 3);
     const arkNode = {
       symbol: 'ARK',
-      pubkey: Buffer.alloc(32, 3),
+      getPubkey: jest.fn().mockResolvedValue(ourPubkey),
       subscription: arkSubscription,
     } as any as ArkClient;
     const arkCurrency = {
@@ -665,6 +666,7 @@ describe('SwapManager', () => {
         pair: 'BTC/ARK',
         orderSide: OrderSide.BUY,
         lockupAddress: 'ark_submarine_address',
+        keyIndex: 1,
         preimageHash:
           '4d57a64c3b4f19cd4a8c79e3038dba7024bbf77ee4f768f0c1b42fbb590c835c',
         refundPublicKey,
@@ -679,6 +681,7 @@ describe('SwapManager', () => {
         orderSide: OrderSide.BUY,
         status: SwapUpdateEvent.TransactionConfirmed,
         lockupAddress: 'ark_reverse_address',
+        keyIndex: 2,
         preimageHash:
           '6b0d0275c597a18cfcc23261a62e095e2ba12ac5c866823d2926912806a5b10a',
         claimPublicKey,
@@ -697,6 +700,7 @@ describe('SwapManager', () => {
         receivingData: {
           symbol: 'ARK',
           lockupAddress: 'ark_chain_receive_address',
+          keyIndex: 3,
           theirPublicKey,
         },
         sendingData: {
@@ -717,6 +721,7 @@ describe('SwapManager', () => {
         sendingData: {
           symbol: 'ARK',
           lockupAddress: 'ark_chain_send_address',
+          keyIndex: 4,
           theirPublicKey,
         },
       },
@@ -733,7 +738,7 @@ describe('SwapManager', () => {
             '4d57a64c3b4f19cd4a8c79e3038dba7024bbf77ee4f768f0c1b42fbb590c835c',
           ),
           getHexBuffer(refundPublicKey),
-          arkNode.pubkey,
+          ourPubkey,
         ),
       },
       {
@@ -742,7 +747,7 @@ describe('SwapManager', () => {
           getHexBuffer(
             '6b0d0275c597a18cfcc23261a62e095e2ba12ac5c866823d2926912806a5b10a',
           ),
-          arkNode.pubkey,
+          ourPubkey,
           getHexBuffer(claimPublicKey),
         ),
       },
@@ -753,7 +758,7 @@ describe('SwapManager', () => {
             '1558d179d9e3de706997e3b6bb33f704a5b8086b27538fd04ef5e313467333b8',
           ),
           getHexBuffer(theirPublicKey),
-          arkNode.pubkey,
+          ourPubkey,
         ),
       },
       {
@@ -762,7 +767,7 @@ describe('SwapManager', () => {
           getHexBuffer(
             '12882524ddbee7d099e2bf6dc2f32d320dfc0a01939bf2fd2cef181f27f5e26c',
           ),
-          arkNode.pubkey,
+          ourPubkey,
           getHexBuffer(theirPublicKey),
         ),
       },
@@ -1858,19 +1863,25 @@ describe('SwapManager', () => {
       unilateralRefundWithoutReceiver: 64,
     };
 
+    const arkNodePubkey = Buffer.alloc(33, 3);
+    const arkNodeKeyIndex = 7;
+
     let arkNode: any;
 
     beforeEach(() => {
       arkNode = {
         symbol: 'ARK',
-        pubkey: Buffer.alloc(33, 3),
+        getPubkey: jest.fn().mockResolvedValue(arkNodePubkey),
         createVHtlc: jest.fn().mockResolvedValue({
           vHtlc: {
             id: 'vHtlcId',
             address: 'arkLockupAddress',
             swapTree: arkTree,
+            claimPubkey: getHexString(arkNodePubkey),
+            refundPubkey: getHexString(arkNodePubkey),
           },
           timeouts,
+          keyIndex: arkNodeKeyIndex,
         }),
         subscription: {
           subscribeAddresses: jest.fn().mockResolvedValue(undefined),
@@ -1918,13 +1929,14 @@ describe('SwapManager', () => {
         swapTree: arkTree,
         timeoutBlockHeights: timeouts,
         lockupAddress: 'arkLockupAddress',
-        refundPublicKey: getHexString(arkNode.pubkey),
+        refundPublicKey: getHexString(arkNodePubkey),
       });
 
       expect(mockAddReverseSwap).toHaveBeenCalledTimes(1);
       expect(mockAddReverseSwap).toHaveBeenCalledWith(
         expect.objectContaining({
           lockupAddress: 'arkLockupAddress',
+          keyIndex: arkNodeKeyIndex,
           timeoutBlockHeight: timeouts.refund,
           redeemScript: JSON.stringify(arkTree),
         }),
@@ -1973,7 +1985,7 @@ describe('SwapManager', () => {
         swapTree: arkTree,
         lockupAddress: 'arkLockupAddress',
         timeoutBlockHeight: timeouts.refund,
-        serverPublicKey: getHexString(arkNode.pubkey),
+        serverPublicKey: getHexString(arkNodePubkey),
       });
 
       // The receiving side is a regular serialized swap tree

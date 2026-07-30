@@ -559,6 +559,7 @@ class SwapManager {
         orderSide: args.orderSide,
         referral: args.referralId,
         lockupAddress: vHtlc.vHtlc.address,
+        keyIndex: vHtlc.keyIndex,
         paymentTimeout: args.paymentTimeout,
         status: SwapUpdateEvent.SwapCreated,
         preimageHash: getHexString(args.preimageHash),
@@ -1133,6 +1134,7 @@ class SwapManager {
         pair,
         minerFeeInvoice,
         nodeId,
+        keyIndex: vHtlc.keyIndex,
         version: args.version,
         fee: args.percentageFee,
         invoice: paymentRequest,
@@ -1346,6 +1348,7 @@ class SwapManager {
           ? vHtlc.vHtlc.refundPubkey
           : vHtlc.vHtlc.claimPubkey;
 
+        res.keyIndex = vHtlc.keyIndex;
         res.theirPublicKey = getHexString(theirPublicKey!);
         res.lockupAddress = vHtlc.vHtlc.address;
         res.timeoutBlockHeight = vHtlc.timeouts.refund;
@@ -1562,7 +1565,7 @@ class SwapManager {
             swap.lockupAddress,
             ArkClient.createVhtlcId(
               getHexBuffer(swap.preimageHash),
-              swap.keyIndex,
+              await arkNode.getPubkey(swap.keyIndex!),
               getHexBuffer((swap as ReverseSwap).claimPublicKey!),
             ),
           );
@@ -1582,7 +1585,7 @@ class SwapManager {
             ArkClient.createVhtlcId(
               getHexBuffer(swap.preimageHash),
               getHexBuffer((swap as Swap).refundPublicKey!),
-              arkNode.pubkey,
+              await arkNode.getPubkey(swap.keyIndex!),
             ),
           );
         }
@@ -1612,7 +1615,7 @@ class SwapManager {
               ArkClient.createVhtlcId(
                 getHexBuffer(swap.preimageHash),
                 getHexBuffer(swap.receivingData.theirPublicKey!),
-                arkNode.pubkey,
+                await arkNode.getPubkey(swap.receivingData.keyIndex!),
               ),
             );
           }
@@ -1634,7 +1637,7 @@ class SwapManager {
               swap.sendingData.lockupAddress,
               ArkClient.createVhtlcId(
                 getHexBuffer(swap.preimageHash),
-                arkNode.pubkey,
+                await arkNode.getPubkey(swap.sendingData.keyIndex!),
                 getHexBuffer(swap.sendingData.theirPublicKey!),
               ),
             );

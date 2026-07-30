@@ -207,8 +207,6 @@ message GetInfoResponse {
   string server_url = 3;
   // info about the current version of the ark wallet.
   BuildInfo build_info = 4;
-  // The Fulmine's public key used in VTXO scripts.
-  string pubkey = 5;
   // The signer's public key used in VTXO scripts.
   string signer_pubkey = 6;
 }
@@ -293,6 +291,8 @@ message CreateVHTLCResponse {
   int64 unilateral_claim_delay = 8;
   int64 unilateral_refund_delay = 9;
   int64 unilateral_refund_without_receiver_delay = 10;
+  // Index of the key Fulmine derived for this vHTLC.
+  uint64 key_index = 11;
 }
 
 message ClaimVHTLCRequest {

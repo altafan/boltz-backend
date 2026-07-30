@@ -111,10 +111,12 @@ class ArkClient extends BaseClient<
 
   private static readonly opCsvMultiple = 512;
 
-  public pubkey!: Buffer;
   public signerPubkey!: Buffer;
   public addrPrefix!: string;
   public subscription!: ArkSubscription;
+
+  // Fulmine derives a new key per vHTLC, so pubkeys are cached by key index
+  private readonly pubkeys = new Map<number, Buffer>();
 
   private chainClient?: IChainClient;
 
@@ -287,9 +289,8 @@ class ArkClient extends BaseClient<
     try {
       const info = await this.getInfo();
       this.logger.debug(
-        `Connected to ${this.serviceName()} ${this.symbol} with pubkey: ${info.pubkey}`,
+        `Connected to ${this.serviceName()} ${this.symbol}`,
       );
-      this.pubkey = getHexBuffer(info.pubkey);
       this.signerPubkey = getHexBuffer(info.signerPubkey);
       this.addrPrefix = info.addrPrefix;
 
@@ -340,7 +341,6 @@ class ArkClient extends BaseClient<
 
     try {
       const info = await this.getInfo();
-      this.pubkey = getHexBuffer(info.pubkey);
       this.signerPubkey = getHexBuffer(info.signerPubkey);
       this.addrPrefix = info.addrPrefix;
 
@@ -404,6 +404,28 @@ class ArkClient extends BaseClient<
       'getInfo',
       {},
     );
+  };
+
+  /**
+   * Fetches the compressed public key Fulmine derived at the given key index
+   *
+   * @param keyIndex - index of the key as returned by CreateVHTLC
+   */
+  public getPubkey = async (keyIndex: number): Promise<Buffer> => {
+    const cached = this.pubkeys.get(keyIndex);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const res = await this.walletUnaryCall<
+      walletrpc.GetPubKeyRequest,
+      walletrpc.GetPubKeyResponse
+    >('getPubKey', { keyIndex: toProtoInt(keyIndex) });
+
+    const pubkey = getHexBuffer(res.pubkey);
+    this.pubkeys.set(keyIndex, pubkey);
+
+    return pubkey;
   };
 
   public getWalletStatus = async () => {
@@ -506,6 +528,7 @@ class ArkClient extends BaseClient<
   ): Promise<{
     vHtlc: arkrpc.CreateVHTLCResponse;
     timeouts: Timeouts;
+    keyIndex: number;
   }> => {
     const convertDelay = (delay: number) => {
       if (this.useLocktimeSeconds) {
@@ -576,26 +599,32 @@ class ArkClient extends BaseClient<
       timeouts.unilateralRefundWithoutReceiver,
     );
 
+    const vHtlc = await this.unaryCall<
+      arkrpc.CreateVHTLCRequest,
+      arkrpc.CreateVHTLCResponse
+    >('createVhtlc', req);
+
     return {
       timeouts,
-      vHtlc: await this.unaryCall<
-        arkrpc.CreateVHTLCRequest,
-        arkrpc.CreateVHTLCResponse
-      >('createVhtlc', req),
+      vHtlc,
+      keyIndex: fromProtoInt(vHtlc.keyIndex),
     };
   };
 
+  /**
+   * @param keyIndex - index of our key in the vHTLC; we are the receiver when claiming
+   */
   public claimVHtlc = async (
     preimage: Buffer,
     senderPubkey: Buffer,
-    receiverPubkey: Buffer,
+    keyIndex: number,
     outpoint: Outpoint,
     label: string,
   ): Promise<string> => {
     const vhtlcId = ArkClient.createVhtlcId(
       sha256(preimage),
       senderPubkey,
-      receiverPubkey,
+      await this.getPubkey(keyIndex),
     );
     this.logger.debug(
       `Claiming vHTLC ${vhtlcId} outpoint: ${outpoint.txId}:${outpoint.vout}`,
@@ -620,17 +649,18 @@ class ArkClient extends BaseClient<
 
   /**
    * @param preimageHash - sha256 hash of the preimage
+   * @param keyIndex - index of our key in the vHTLC; we are the sender when refunding
    */
   public refundVHtlc = async (
     preimageHash: Buffer,
-    senderPubkey: Buffer,
+    keyIndex: number,
     receiverPubkey: Buffer,
     outpoint: Outpoint,
     label: string,
   ) => {
     const vhtlcId = ArkClient.createVhtlcId(
       preimageHash,
-      senderPubkey,
+      await this.getPubkey(keyIndex),
       receiverPubkey,
     );
     this.logger.debug(

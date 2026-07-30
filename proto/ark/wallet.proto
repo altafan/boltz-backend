@@ -74,6 +74,13 @@ service WalletService {
       body: "*"
     };
   };
+
+  // GetPubKey returns the public key derived at the given key index.
+  rpc GetPubKey(GetPubKeyRequest) returns (GetPubKeyResponse) {
+    option (google.api.http) = {
+      get: "/v1/wallet/pubkey/{key_index}"
+    };
+  };
 }
 
 message GenSeedRequest{}
@@ -147,4 +154,11 @@ message AuthRequest {
 
 message AuthResponse {
   bool verified = 1;
+}
+
+message GetPubKeyRequest {
+  uint64 key_index = 1;
+}
+message GetPubKeyResponse {
+  string pubkey = 1;
 }
