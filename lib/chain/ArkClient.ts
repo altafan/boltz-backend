@@ -231,6 +231,17 @@ class ArkClient extends BaseClient<
   };
 
   /**
+   * Fulmine keeps the vHTLC keys x-only (BIP-340) in its contract params and
+   * parses them back with an even Y coordinate before hashing the vHTLC id.
+   * The parity byte of the key we hold therefore must not influence the id.
+   */
+  private static toEvenYCompressed = (pubkey: Uint8Array): Buffer =>
+    Buffer.concat([
+      Buffer.from([0x02]),
+      ArkClient.toXOnly(Buffer.from(pubkey)),
+    ]);
+
+  /**
    * @param preimageHash - SHA256 hash of the preimage
    */
   public static createVhtlcId = (
@@ -240,8 +251,8 @@ class ArkClient extends BaseClient<
   ) => {
     const data = Buffer.concat([
       ripemd160(preimageHash),
-      senderPubkey,
-      receiverPubkey,
+      ArkClient.toEvenYCompressed(senderPubkey),
+      ArkClient.toEvenYCompressed(receiverPubkey),
     ]);
     return getHexString(sha256(data));
   };
@@ -288,9 +299,7 @@ class ArkClient extends BaseClient<
 
     try {
       const info = await this.getInfo();
-      this.logger.debug(
-        `Connected to ${this.serviceName()} ${this.symbol}`,
-      );
+      this.logger.debug(`Connected to ${this.serviceName()} ${this.symbol}`);
       this.signerPubkey = getHexBuffer(info.signerPubkey);
       this.addrPrefix = info.addrPrefix;
 
